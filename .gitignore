@@ -1,0 +1,7 @@
+#cabal
+dist
+dist-newstyle
+
+#nix
+result
+result-*
