@@ -38,12 +38,11 @@ let
   overlay = self: super: {
     haskellPackages =
       super.haskellPackages.override (old: {
-        overrides = self.lib.foldr self.lib.composeExtensions (_: _: {}) [
+        overrides = self.lib.composeExtensions
           (old.overrides or (_: _: {}))
           (self: super: {
             purplechain = self.callCabal2nix "purplechain" sources.purplechain {};
-          })
-        ];
+          });
       });
   };
 
