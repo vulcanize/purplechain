@@ -30,19 +30,32 @@ let
       sha256 = "0jrh5ghisaqdd0vldbywags20m2cxpkbbk5jjjmwaw0gr8nhsafv";
     };
 
+    which = hostNixpkgs.fetchFromGitHub {
+      owner = "obsidiansystems";
+      repo = "which";
+      rev = "3cf0bfb835732848697173c32696168541648df2";
+      sha256 = "0khnczrrcw4ywb750iqfd8v8z2p871b2s6rxbi67inkdc85y1dn4";
+    };
+
     purplechain = gitignoreSource ./.;
   };
 
   gitignoreSource = (import sources.gitignore {}).gitignoreSource;
 
   overlay = self: super: {
-    haskellPackages =
+    haskellPackages = with pkgs.haskell.lib;
       super.haskellPackages.override (old: {
-        overrides = self.lib.composeExtensions
-          (old.overrides or (_: _: {}))
+        overrides = self.lib.foldr self.lib.composeExtensions (old.overrides or (_: _: {})) [
           (self: super: {
             purplechain = self.callCabal2nix "purplechain" sources.purplechain {};
-          });
+            which = self.callCabal2nix "which" sources.which {};
+          })
+          (self: super: {
+            purplechain = overrideCabal super.purplechain (drv: {
+              executableSystemDepends = (drv.executableSystemDepends or []) ++ [pkgs.tendermint];
+            });
+          })
+        ];
       });
   };
 
