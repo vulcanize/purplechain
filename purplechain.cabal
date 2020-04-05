@@ -24,6 +24,7 @@ library
                      , mkrfuzz
 
   exposed-modules:     Purplechain
+  ghc-options:         -Wall
 
 executable purplechain
   main-is:             Main.hs
