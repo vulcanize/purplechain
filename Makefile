@@ -4,6 +4,8 @@ dev:
 	./make dev
 repl:
 	./make repl
+shell:
+	./make shell
 watch:
 	./make watch
 hoogle:

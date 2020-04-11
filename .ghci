@@ -1,0 +1,2 @@
+:set prompt "\SOH\a\ESC[30;42m\STX%s\SOH\ESC[K\ESC[49m\STX\SOH\ESC[39m\STX\n\SOH\ESC[32m\STX>\SOH\ESC[39m\STX "
+:set -XOverloadedStrings
