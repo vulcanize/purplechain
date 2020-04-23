@@ -1,2 +1,0 @@
-DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-cd $DIR/.. && nix-shell --run "ghcid -c 'cabal new-repl' --restart='purplechain.cabal' --lint"

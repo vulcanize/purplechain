@@ -12,8 +12,8 @@ let
     purple = hostNixpkgs.fetchFromGitHub {
       owner = "vulcanize";
       repo = "purple";
-      rev = "8047c026109fe92ff4640e82b18d67a12a760b0a";
-      sha256 = "12wm357lkpdak0a6d5bbxla8d4scvfjh5mmrraia3la8kd0b8mbr";
+      rev = "398eee7219daf6f21e84c68df1ed768bdf14cde1";
+      sha256 = "1mmp5xg078fqbk9mchvg4ig9jka8kzdxgqzs4lw39d88qrc1cg6c";
     };
 
     kepler = hostNixpkgs.fetchFromGitHub {
@@ -30,19 +30,32 @@ let
       sha256 = "0jrh5ghisaqdd0vldbywags20m2cxpkbbk5jjjmwaw0gr8nhsafv";
     };
 
+    which = hostNixpkgs.fetchFromGitHub {
+      owner = "obsidiansystems";
+      repo = "which";
+      rev = "3cf0bfb835732848697173c32696168541648df2";
+      sha256 = "0khnczrrcw4ywb750iqfd8v8z2p871b2s6rxbi67inkdc85y1dn4";
+    };
+
     purplechain = gitignoreSource ./.;
   };
 
   gitignoreSource = (import sources.gitignore {}).gitignoreSource;
 
   overlay = self: super: {
-    haskellPackages =
+    haskellPackages = with pkgs.haskell.lib;
       super.haskellPackages.override (old: {
-        overrides = self.lib.composeExtensions
-          (old.overrides or (_: _: {}))
+        overrides = self.lib.foldr self.lib.composeExtensions (old.overrides or (_: _: {})) [
           (self: super: {
             purplechain = self.callCabal2nix "purplechain" sources.purplechain {};
-          });
+            which = self.callCabal2nix "which" sources.which {};
+          })
+          (self: super: {
+            purplechain = overrideCabal super.purplechain (drv: {
+              executableSystemDepends = (drv.executableSystemDepends or []) ++ (with pkgs; [iavl tendermint]);
+            });
+          })
+        ];
       });
   };
 

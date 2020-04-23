@@ -17,13 +17,49 @@ library
   hs-source-dirs:      src
   default-language:    Haskell2010
   build-depends:       base >=4.12 && <4.13
+                     , aeson
+                     , ansi-terminal
+                     , ansi-wl-pprint
+                     , async
+                     , bytestring
+                     , colour
+                     , conduit-extra
+                     , containers
+                     , data-default-class
+                     , errors
                      , hs-abci-extra
+                     , hs-abci-sdk
                      , hs-abci-server
+                     , hs-abci-test-utils
                      , hs-abci-types
+                     , hs-iavl-client
                      , hs-tendermint-client
+                     , lens
                      , mkrfuzz
+                     , modern-uri
+                     , mtl
+                     , polysemy
+                     , pretty
+                     , proto3-suite
+                     , servant
+                     , shelly
+                     , string-conversions
+                     , text
+                     , tomland
+                     , tree-diff
+                     , which
 
   exposed-modules:     Purplechain
+                       Purplechain.Application
+                       Purplechain.Client
+                       Purplechain.Module
+                       Purplechain.Module.Keeper
+                       Purplechain.Module.Message
+                       Purplechain.Module.Router
+                       Purplechain.Module.Query
+                       Purplechain.Module.Types
+                       Tendermint
+                       Tendermint.Config
   ghc-options:         -Wall
 
 executable purplechain

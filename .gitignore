@@ -5,3 +5,9 @@ dist-newstyle
 #nix
 result
 result-*
+
+# tendermint
+.node*
+
+# iavl
+test.db
