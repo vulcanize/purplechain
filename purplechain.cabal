@@ -1,0 +1,34 @@
+cabal-version:       >=1.10
+name:                purplechain
+version:             0.1.0.0
+-- synopsis:
+-- description:
+-- bug-reports:
+-- license:
+license-file:        LICENSE
+--author:
+--maintainer:
+-- copyright:
+-- category:
+build-type:          Simple
+extra-source-files:  README.md
+
+library
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+  build-depends:       base >=4.12 && <4.13
+                     , hs-abci-extra
+                     , hs-abci-server
+                     , hs-abci-types
+                     , hs-tendermint-client
+                     , mkrfuzz
+
+  exposed-modules:     Purplechain
+  ghc-options:         -Wall
+
+executable purplechain
+  main-is:             Main.hs
+  hs-source-dirs:      src-bin
+  default-language:    Haskell2010
+  build-depends:       base >=4.12 && <4.13
+                     , purplechain
