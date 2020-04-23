@@ -16,6 +16,7 @@ import Control.Exception                                (IOException, handle)
 import Control.Lens                                     (_Right, _Just, imap, makeLenses, (&), (^.), (.~), (%~), (^?))
 import Control.Monad.IO.Class                           (MonadIO(..))
 import Data.Bool                                        (bool)
+import Data.Colour.SRGB                                 (Colour, sRGB24)
 import Data.Functor                                     (void)
 import Data.Maybe                                       (fromMaybe)
 import Data.Text                                        (Text)
@@ -23,8 +24,10 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Traversable                                 (for)
 import GHC.Generics                                     (Generic)
+import GHC.Word
 import Shelly                                           (Sh, cp, pwd, run, shelly, silently, toTextIgnore, withTmpDir, (</>))
 import qualified Shelly as Sh
+import System.Console.ANSI                              (ConsoleLayer(..), SGR(..), setSGRCode)
 import System.IO                                        (BufferMode (..), hSetBuffering, stderr, stdout)
 import System.Which                                     (staticWhich)
 import Text.Read                                        (readMaybe)
@@ -39,8 +42,40 @@ import Tendermint.Config                                hiding (uri)
 tshow :: Show a => a -> Text
 tshow = T.pack . show
 
+tread :: Read a => Text -> Maybe a
+tread = readMaybe . T.unpack
+
 logger :: MonadIO m => Text -> m ()
-logger = liftIO . T.putStrLn . ("[PURPLE] \t" <>)
+logger = liftIO . T.putStrLn . sgrify [SetRGBColor Foreground $ purpleN 3] . ("[PURPLE] \t" <>)
+
+withLogging :: MonadIO m => IO a -> m a
+withLogging m = liftIO $ do
+  let w = T.putStrLn . T.pack . setSGRCode
+  w [SetRGBColor Foreground $ purpleN 3]
+  a <- m
+  w [Reset]
+  pure a
+
+purple :: (Word8, Word8, Word8)
+purple = (0x24, 0x1A, 0x47)
+
+purpleN :: Word8 -> Colour Float
+purpleN n = sRGB24 (r * n) (g * n) (b * n)
+  where (r,g,b) = purple
+
+white :: Colour Float
+white = sRGB24 0xFF 0xFF 0xFF
+
+black :: Colour Float
+black = sRGB24 0 0 0
+
+
+sgrify :: [SGR] -> Text -> Text
+sgrify codes txt = mconcat
+  [ T.pack $ setSGRCode codes
+  , txt
+  , T.pack $ setSGRCode [Reset]
+  ]
 
 initProcess :: MonadIO m => m ()
 initProcess = liftIO $ do
@@ -230,7 +265,7 @@ initNetwork root size = shelly $ do
           & config_p2p . configP2P_privatePeerIds .~ peers'
           & config_p2p . configP2P_addrBookStrict .~ False
           & config_p2p . configP2P_allowDuplicateIp .~ True
-          & config_consensus . configConsensus_createEmptyBlocksInterval .~ "60s"
+          & config_consensus . configConsensus_createEmptyBlocksInterval .~ "5s"
 
     storeConfig home cfg
     pure $ n & tendermintNode_config .~ cfg

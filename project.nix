@@ -12,8 +12,8 @@ let
     purple = hostNixpkgs.fetchFromGitHub {
       owner = "vulcanize";
       repo = "purple";
-      rev = "8047c026109fe92ff4640e82b18d67a12a760b0a";
-      sha256 = "12wm357lkpdak0a6d5bbxla8d4scvfjh5mmrraia3la8kd0b8mbr";
+      rev = "398eee7219daf6f21e84c68df1ed768bdf14cde1";
+      sha256 = "1mmp5xg078fqbk9mchvg4ig9jka8kzdxgqzs4lw39d88qrc1cg6c";
     };
 
     kepler = hostNixpkgs.fetchFromGitHub {
@@ -52,7 +52,7 @@ let
           })
           (self: super: {
             purplechain = overrideCabal super.purplechain (drv: {
-              executableSystemDepends = (drv.executableSystemDepends or []) ++ [pkgs.tendermint];
+              executableSystemDepends = (drv.executableSystemDepends or []) ++ (with pkgs; [iavl tendermint]);
             });
           })
         ];

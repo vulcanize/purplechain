@@ -1,58 +1,115 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-module Purplechain where
+module Purplechain
+  ( module Purplechain
+  , module Purplechain.Client
+  , module Purplechain.Module.Message
+  , module Maker
+  , QueryArgs(..)
+  ) where
 
-import Control.Lens                                     ((^.))
+import Control.Concurrent.Async
+import Control.Exception
+import Control.Lens                                     (makeLenses, (^.), (&))
+
+import Control.Monad.IO.Class
+import Control.Monad.State
 import Data.Conduit.Network                             (serverSettings)
-import Data.Default.Class                               (def)
+import Data.Foldable                                    (fold)
 import Data.String                                      (IsString(..))
+import Data.Text                                        (Text)
+import GHC.Generics
 import qualified Data.Text as T
+import Shelly                                           (shelly, sleep, run)
+import qualified Shelly                                 as Sh
+import System.Which                                     (staticWhich)
 
+import Maker
 import Network.ABCI.Server                              (serveAppWith)
-import Network.ABCI.Server.App                          (App(..), Request(..), transformApp)
 import Tendermint
 import Tendermint.Config
+import Tendermint.SDK.BaseApp.Query.Types               (QueryArgs(..))
 
-main :: IO ()
-main = test
+import Purplechain.Application                          (mkContext, makeIOApp)
+import Purplechain.Client
+import Purplechain.Module.Message
 
-type PurplechainNode = TendermintNode
+data PurplechainNode = PurplechainNode
+  { _purplechainNode_tendermint :: TendermintNode
+  , _purplechainNode_iavlPorts :: IAVLPorts
+  } deriving (Eq, Ord, Show, Generic)
+
+data IAVLPorts = IAVLPorts
+  { _iavlPorts_grpc :: Word
+  , _iavlPorts_gateway :: Word
+  } deriving (Eq, Ord, Show, Generic)
+
+makeLenses ''PurplechainNode
+makeLenses ''IAVLPorts
+
+mkPurplechainNode :: TendermintNode -> PurplechainNode
+mkPurplechainNode tn = PurplechainNode tn iavlPorts
+  where
+    iavlPorts = IAVLPorts (proxyAppPort + 1) (proxyAppPort + 2)
+    (_, proxyAppPort) = unsafeHostPortFromURI $ tn ^. tendermintNode_config . config_proxyApp
 
 purplechainNetwork :: Word -> AppNetwork PurplechainNode
 purplechainNetwork size = AppNetwork
-  { _appNetwork_toAppNode = id
-  , _appNetwork_fromAppNode = id
-  , _appNetwork_withNode = runABCI
+  { _appNetwork_toAppNode = mkPurplechainNode
+  , _appNetwork_fromAppNode = _purplechainNode_tendermint
+  , _appNetwork_withNode = withPurplechainNode
   , _appNetwork_size = size
   }
+
+main :: IO ()
+main = test
 
 test :: IO ()
 test = do
   initProcess
   withThrowawayNetwork (purplechainNetwork 3) $ \_root -> \case
-    [_n0,_n1,_n2] -> pure ()
-    _ -> error "impossible"
+    _ -> pure ()
+
+withPurplechainNode :: MonadIO m => PurplechainNode -> m ()
+withPurplechainNode pn = liftIO $ do
+  let home = pn ^. purplechainNode_tendermint . tendermintNode_home
+  shelly $ sleep 3
+  withAsync (runIAVL home $ pn ^. purplechainNode_iavlPorts) $ \_ -> do
+    shelly $ sleep 3
+    runABCI pn
+
+iavlServerPath :: Sh.FilePath
+iavlServerPath = Sh.fromText $ T.pack $(staticWhich "iavlserver")
+
+runIAVL :: Text -> IAVLPorts -> IO ()
+runIAVL root (IAVLPorts grpcPort gatewayPort) = do
+  let iavl = print <=< shelly $ run iavlServerPath $ fold
+        [ ["-db-name", "test"]
+        , ["-datadir", root <> "/test.db"]
+        , ["-grpc-endpoint", "0.0.0.0" <> ":" <> tshow grpcPort]
+        , ["-gateway-endpoint", "0.0.0.0" <> ":" <> tshow gatewayPort ]
+        ]
+  iavl
+    & handle (\(e :: SomeException) -> do
+                 putStrLn "ERROR IN RUNIAVL"
+                 putStrLn ("::: " <> show e <> " :::")
+                 error ""
+             )
+  pure ()
 
 runABCI :: PurplechainNode -> IO ()
-runABCI n = do
+runABCI pn = do
   let
-    cfg = n ^. tendermintNode_config
+    cfg = pn ^. purplechainNode_tendermint . tendermintNode_config
     (host, port) = unsafeHostPortFromURI $ cfg ^. config_proxyApp
-
+  ctx <- mkContext (pn ^. purplechainNode_iavlPorts . iavlPorts_grpc)
   serveAppWith (serverSettings (fromEnum port) (fromString . T.unpack $ host)) mempty $
-    transformApp id app
-
-app :: Applicative m => App m
-app = App $ \case
-  RequestEcho _ -> pure def
-  RequestFlush _ -> pure def
-  RequestInfo _ -> pure def
-  RequestSetOption _ -> pure def
-  RequestInitChain _ -> pure def
-  RequestQuery _ -> pure def
-  RequestBeginBlock _ -> pure def
-  RequestCheckTx _ -> pure def
-  RequestDeliverTx _ -> pure def
-  RequestEndBlock _ -> pure def
-  RequestCommit _ -> pure def
+    makeIOApp ctx
