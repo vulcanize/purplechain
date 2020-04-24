@@ -37,7 +37,7 @@ let
       sha256 = "0khnczrrcw4ywb750iqfd8v8z2p871b2s6rxbi67inkdc85y1dn4";
     };
 
-    purplechain = gitignoreSource ./.;
+    purplechain = gitignoreSource ./purplechain;
   };
 
   gitignoreSource = (import sources.gitignore {}).gitignoreSource;
