@@ -58,6 +58,8 @@ library
                        Purplechain.Module.Router
                        Purplechain.Module.Query
                        Purplechain.Module.Types
+                       Purplechain.Network
+                       Purplechain.Node
                        Tendermint
                        Tendermint.Config
   ghc-options:         -Wall
