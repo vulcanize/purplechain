@@ -46,6 +46,7 @@ library
                      , string-conversions
                      , text
                      , tomland
+                     , transformers
                      , tree-diff
                      , which
 

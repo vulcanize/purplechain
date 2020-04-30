@@ -10,7 +10,6 @@
 {-# LANGUAGE TypeFamilies #-}
 module Purplechain.Node
   ( module Purplechain.Node
-  , module Purplechain.Client
   , module Purplechain.Module.Message
   , module Maker
   , QueryArgs(..)
@@ -39,7 +38,6 @@ import Tendermint.Config
 import Tendermint.SDK.BaseApp.Query.Types               (QueryArgs(..))
 
 import Purplechain.Application                          (mkContext, makeIOApp)
-import Purplechain.Client
 import Purplechain.Module.Message
 
 data PurplechainNode = PurplechainNode

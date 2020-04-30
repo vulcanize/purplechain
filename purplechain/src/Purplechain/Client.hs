@@ -1,28 +1,42 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-module Purplechain.Client where
+module Purplechain.Client
+  ( module Maker
+  , module Purplechain.Client
+  , module Purplechain.Module.Message
+  , module Network.Tendermint.Client
+  , module Tendermint
+  , module Tendermint.SDK.BaseApp.Query
+  ) where
 
 import qualified Data.Aeson as Aeson
 import           Control.Exception                  (SomeException, handle)
 import           Control.Lens                       (strict, (^.), (&))
-import           Control.Monad.Reader               (ReaderT(..))
 import           Control.Monad.IO.Class             (MonadIO(..))
+import           Control.Monad.Reader               (ReaderT(..))
 import qualified Data.ByteArray.Base64String        as Base64
 import qualified Data.ByteString.Lazy.Internal      as BS
 import           Data.Default.Class                 (def)
 import           Data.Proxy                         (Proxy(..))
 import           Data.Text                          (Text)
 import qualified Data.Text.Encoding                 as T
+import           Data.TreeDiff.Class                (ToExpr, ediff)
+import           Data.TreeDiff.Pretty               (ansiWlEditExprCompact)
 import           Servant.API                        ((:<|>) (..))
+import           Text.PrettyPrint.ANSI.Leijen.Internal (Doc)
 
 import           Maker
+import           Network.Tendermint.Client          (health, abciInfo)
 import qualified Network.Tendermint.Client          as RPC
 
+import           Tendermint
+import           Tendermint.Config
 import           Tendermint.SDK.Application.Module  (ApplicationC, ApplicationD, ApplicationQ)
 import qualified Tendermint.SDK.BaseApp             as BA
 import           Tendermint.SDK.BaseApp.Query       (QueryArgs (..), QueryResult (..))
@@ -36,22 +50,23 @@ import           Tendermint.Utils.User              (makeSignerFromUser, makeUse
 
 import           Purplechain.Application
 import           Purplechain.Module.Message
-import           Purplechain.Module.Types
+import           Purplechain.Node
 
 type TxClientM = ReaderT ClientConfig IO
 
 runTxClientM :: RPC.Config -> TxClientM a -> IO a
 runTxClientM cfg m = runReaderT m (txClientConfig cfg)
 
-tx :: Text -> Word -> (TxOpts -> msg -> TxClientM a) -> msg -> IO a
-tx host port mkTx msg = do
-  let cfg = RPC.defaultConfig (T.encodeUtf8 host) (fromEnum port) True
-  runTxClientM cfg $ mkTx txOpts msg
+mkRPCConfig :: PurplechainNode -> RPC.Config
+mkRPCConfig pn =
+  let (host, port) = unsafeHostPortFromURI $ pn ^. purplechainNode_tendermint . tendermintNode_config . config_rpc . configRPC_laddr
+  in RPC.defaultConfig (T.encodeUtf8 host) (fromEnum port) True
 
-query :: Text -> Word -> RPC.TendermintM a -> IO a
-query host port q =
-  let cfg = RPC.defaultConfig (T.encodeUtf8 host) (fromEnum port) True
-  in RPC.runTendermintM cfg q
+tx :: MonadIO m => PurplechainNode -> (TxOpts -> msg -> TxClientM a) -> msg -> m a
+tx pn mkTx msg = liftIO $ runTxClientM (mkRPCConfig pn) $ mkTx txOpts msg
+
+query :: MonadIO m => PurplechainNode -> RPC.TendermintM a -> m a
+query pn q = liftIO $ RPC.runTendermintM (mkRPCConfig pn) q
 
 {- Queries -}
 getSystem
@@ -89,9 +104,6 @@ performActTx :<|> (burnTx :<|> transferTx) :<|> EmptyTxClient = genClientT
   defaultClientTxOpts
 
 {- Test utils -}
-args0 :: QueryArgs BlockHeight
-args0 = QueryArgs False (BlockHeight 0) 0
-
 user1 :: Signer
 user1 = makeSignerFromUser $ makeUser "f65255094d7773ed8dd417badc9fc045c1f80fdc5b2d25172b031ce6933e039a"
 
@@ -123,6 +135,15 @@ txClientConfig cfg =
        { clientGetNonce = getNonce
        , clientRPC = rpcConfig
        }
+
+
+diff :: ToExpr a => a -> a -> Doc
+diff old new = ansiWlEditExprCompact $ ediff old new
+
+unQuery :: QueryClientResponse System -> Maybe System
+unQuery = \case
+  QueryError _ -> Nothing
+  QueryResponse r -> Just $ queryResultData r
 
 {- Tendermint layer transactions -}
 broadcastAct :: MonadIO m => Text -> Word -> Act -> m ()
