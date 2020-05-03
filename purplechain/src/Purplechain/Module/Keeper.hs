@@ -13,7 +13,7 @@ import Control.Arrow        (left)
 import Data.TreeDiff.Class  (ediff)
 import Data.TreeDiff.Pretty (ansiWlEditExprCompact)
 
-import Maker                (exec, initialSystem, perform)
+import Maker                (being, exec, initialSystem, perform)
 import Polysemy             (Sem, Member, Members, interpret, makeSem)
 import Polysemy.Error       (Error, fromEither, mapError)
 import Tendermint
@@ -44,10 +44,11 @@ eval = mapError BA.makeAppError . evalPurplechain
       => Member (Error PurplechainError) r
       => Sem (PurplechainKeeper ': r) a -> Sem r a
     evalPurplechain = interpret $ \case
-      PerformAct (PerformMsg act) -> do
+      PerformAct (PerformMsg act actor) -> do
+        let action = maybe id being actor $ perform act
         currentSystem <- V.takeVar systemVar >>= \case
           Nothing -> pure $ initialSystem 0 --TODO: is there a genesis hook?
           Just s -> pure s
-        newSystem <- fromEither $ left (PurplechainError . tshow) $ exec currentSystem (perform act)
+        newSystem <- fromEither $ left (PurplechainError . tshow) $ exec currentSystem action
         V.putVar newSystem systemVar
         BA.emit $ PurplechainEvent $ tshow $ ansiWlEditExprCompact $ ediff currentSystem newSystem

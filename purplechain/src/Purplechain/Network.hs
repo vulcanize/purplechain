@@ -38,14 +38,14 @@ test = do
           Left err -> liftIO $ print err
           Right r -> pure r
 
-        performAct n act = printErrors <=< runExceptT $ do
+        performAct n actor act = printErrors <=< runExceptT $ do
             old <- get
 
-            preview <- hoistEither $ case exec old (perform act) of
+            preview <- hoistEither $ case exec old (maybe id being actor $ perform act) of
               Right r -> pure r
               Left err -> throwError $ "Preview failed: " <> tshow err
 
-            respTx <- tx n performActTx (PerformMsg act) >>= \case
+            respTx <- tx n performActTx (PerformMsg act actor) >>= \case
               Response sr -> pure sr
               err -> throwError $ "RPC failed: " <> tshow err
 
@@ -64,8 +64,8 @@ test = do
                   printDiff old new
 
       waiting 7 $ liftIO $ print =<< query n0 health
-      waiting 1 $ performAct n0 $ Mint DAI 12 God
-      waiting 1 $ performAct n0 Prod
+      waiting 1 $ performAct n0 Nothing $ Mint DAI 12 God
+      waiting 1 $ performAct n0 Nothing Prod
 
     [] -> pure ()
 
