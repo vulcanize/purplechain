@@ -10,10 +10,9 @@
 module Purplechain.Module.Keeper where
 
 import Control.Arrow        (left)
-import Data.TreeDiff.Class  (ediff)
-import Data.TreeDiff.Pretty (ansiWlEditExprCompact)
+import Data.Maybe           (fromMaybe)
 
-import Maker                (being, exec, initialSystem, perform)
+import Maker                hiding (Error)
 import Polysemy             (Sem, Member, Members, interpret, makeSem)
 import Polysemy.Error       (Error, fromEither, mapError)
 import Tendermint
@@ -46,9 +45,10 @@ eval = mapError BA.makeAppError . evalPurplechain
     evalPurplechain = interpret $ \case
       PerformAct (PerformMsg act actor) -> do
         let action = maybe id being actor $ perform act
-        currentSystem <- V.takeVar systemVar >>= \case
-          Nothing -> pure $ initialSystem 0 --TODO: is there a genesis hook?
-          Just s -> pure s
+        currentSystem <- fromMaybe genesis <$> V.takeVar systemVar
         newSystem <- fromEither $ left (PurplechainError . tshow) $ exec currentSystem action
         V.putVar newSystem systemVar
-        BA.emit $ PurplechainEvent $ tshow $ ansiWlEditExprCompact $ ediff currentSystem newSystem
+
+--TODO: is there a genesis hook?
+genesis :: System
+genesis = initialSystem 1.0

@@ -20,7 +20,7 @@ import Tendermint
 data PerformMsg' act actor = PerformMsg
   { _performMsg_act :: act
   , _performMsg_actor :: actor
-  } deriving Generic
+  } deriving (Eq, Ord, Read, Show, Generic)
 
 type PerformMsg = PerformMsg' Act (Maybe Actor)
 type PerformMsgProto = PerformMsg' Text Text

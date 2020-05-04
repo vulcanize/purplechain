@@ -45,7 +45,6 @@ import qualified Tendermint.SDK.Modules.Bank        as B
 import qualified Tendermint.SDK.Types.Address       as Addr
 import           Tendermint.Utils.Client            ( ClientConfig (..), EmptyTxClient (..), HasQueryClient (..), HasTxClient (..)
                                                     , Signer, QueryClientResponse(..), TxClientResponse, TxOpts(..), defaultClientTxOpts)
-import           Tendermint.Utils.ClientUtils       (rpcConfig)
 import           Tendermint.Utils.User              (makeSignerFromUser, makeUser)
 
 import           Purplechain.Application
@@ -133,7 +132,7 @@ txClientConfig cfg =
 
   in ClientConfig
        { clientGetNonce = getNonce
-       , clientRPC = rpcConfig
+       , clientRPC = cfg
        }
 
 

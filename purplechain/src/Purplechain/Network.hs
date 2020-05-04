@@ -10,38 +10,54 @@
 module Purplechain.Network where
 
 import Control.Concurrent
-import Control.Error.Util (hoistEither)
 import Control.Monad.Except
 import Control.Monad.State
+import Data.List (intersperse)
+import qualified Data.Text as T
+
 import Tendermint
+import qualified Tendermint.SDK.Modules.Auth        as Auth
+import qualified Tendermint.SDK.Modules.Bank        as Bank
 import Tendermint.Utils.TxClient.Types (TxClientResponse(..))
+import Tendermint.Utils.User
+
 import Purplechain.Client hiding (flip)
 import Purplechain.Node hiding (flip)
+import Purplechain.Module.Keeper (genesis)
 
 test :: IO ()
 test = do
   let seconds = (* 1e6)
       wait = liftIO . threadDelay . seconds
-      waiting s x = void $ wait s *> x
+      _waiting s x = void $ wait s *> x
   initProcess
-  withThrowawayNetwork (purplechainNetwork 1) $ \_root -> \case
-    (n0 : _) -> flip evalStateT (initialSystem 0) $ do
+  withThrowawayNetwork (purplechainNetwork 3) $ \_root -> \case
+    (n0 : n1 : _) -> flip evalStateT genesis $ do
       let
-        printDiff old new = liftIO $ do
-          putStrLn "========================== DIFF =========================="
+        printDiff act old new = liftIO $ do
+          let
+            separator = putStrLn "=========================================================="
+
+          separator
+          print act
+          putStrLn ""
+
           if old == new
             then putStrLn "= SYSTEM UNCHANGED"
             else print $ diff old new
-          putStrLn "========================== DIFF =========================="
+
+          putStrLn ""
+          print act
+          separator
 
         printErrors = \case
-          Left err -> liftIO $ print err
+          Left err -> liftIO $ putStrLn $ T.unpack err
           Right r -> pure r
 
         performAct n actor act = printErrors <=< runExceptT $ do
             old <- get
 
-            preview <- hoistEither $ case exec old (maybe id being actor $ perform act) of
+            preview <- case exec old (maybe id being actor $ perform act) of
               Right r -> pure r
               Left err -> throwError $ "Preview failed: " <> tshow err
 
@@ -53,7 +69,7 @@ test = do
 
             wait 1
             respQ <- query n0 $ getSystem $ QueryArgs False () 0
-            printDiff old preview
+            printDiff act old preview
 
             case unQuery respQ of
               Nothing -> throwError $ "Query failed: " <> tshow respQ
@@ -61,13 +77,45 @@ test = do
                 put new
                 when (new /= preview) $ do
                   liftIO $ putStrLn "PREVIEW MISMATCH"
-                  printDiff old new
+                  printDiff act old new
 
-      waiting 7 $ liftIO $ print =<< query n0 health
-      waiting 1 $ performAct n0 Nothing $ Mint DAI 12 God
-      waiting 1 $ performAct n0 Nothing Prod
+      wait 7
 
-    [] -> pure ()
+      sequence_ $ intersperse (wait 1)
+        -- genesis mining
+        [ performAct n0 Nothing $ Mine collateralTag
+        , performAct n0 Nothing $ Hand addr1 (Wad 100000) (Gem collateralTag)
+        , performAct n0 Nothing $ Hand addr2 (Wad 100000) (Gem collateralTag)
+
+        -- market parameters
+        , performAct n0 Nothing $ Frob 1.000000000000000001
+        , performAct n0 Nothing $ Tell 1.01
+        , performAct n0 Nothing $ Form collateralIlk collateralTag
+        , performAct n0 Nothing $ Cork collateralIlk 100
+        , performAct n0 Nothing $ Mark collateralTag (Wad 1) (Sec 1)
+
+        -- issuance
+        , performAct n0 (Just acc1) $ Open urn1 collateralIlk
+        , performAct n0 (Just acc1) $ Lock urn1 50
+        , performAct n0 (Just acc1) $ Free urn1 10
+        , performAct n0 (Just acc1) $ Draw urn1 20
+        , performAct n0 (Just acc1) $ Wipe urn1 10
+
+        -- urn lifecycle
+        , performAct n0 (Just acc2) $ Open urn2 collateralIlk
+        , performAct n0 (Just acc2) $ Give urn2 addr1
+        , performAct n0 (Just acc1) $ Shut urn2
+
+        -- liquidation
+        , performAct n1 Nothing $ Warp (Sec 100)
+        , performAct n0 Nothing $ Bite urn1
+        , performAct n0 Nothing $ Grab urn1
+        , performAct n0 Nothing $ Plop urn1 40
+        , performAct n0 Nothing Loot
+
+        ]
+
+    _ -> pure ()
 
 purplechainNetwork :: Word -> AppNetwork PurplechainNode
 purplechainNetwork size = AppNetwork
@@ -76,3 +124,27 @@ purplechainNetwork size = AppNetwork
   , _appNetwork_withNode = withPurplechainNode
   , _appNetwork_size = size
   }
+
+acc1,acc2 :: Actor
+acc1 = Account addr1
+acc2 = Account addr2
+
+addr1, addr2 :: Address
+addr1 = Address "Address 1"
+addr2 = Address "Address 2"
+
+urn1, urn2 :: Id Urn
+urn1 = Id "urn1"
+urn2 = Id "urn2"
+
+collateralTag :: Id Tag
+collateralTag = Id "collateralTag"
+
+collateralIlk :: Id Ilk
+collateralIlk = Id "collateralIlk"
+
+authAddr :: Auth.Address
+authAddr = userAddress $ makeUser "f65255094d7773ed8dd417badc9fc045c1f80fdc5b2d25172b031ce6933e039a"
+
+collateralCoinId :: Bank.CoinId
+collateralCoinId = "collateral"

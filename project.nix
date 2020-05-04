@@ -12,8 +12,8 @@ let
     purple = hostNixpkgs.fetchFromGitHub {
       owner = "vulcanize";
       repo = "purple";
-      rev = "398eee7219daf6f21e84c68df1ed768bdf14cde1";
-      sha256 = "1mmp5xg078fqbk9mchvg4ig9jka8kzdxgqzs4lw39d88qrc1cg6c";
+      rev = "d425597c988bfd78883dd4fc28c117e460012876";
+      sha256 = "00z5k0f3yrz1c67rgg021il9xa19iqc71xnaqlx0w2004m7r574q";
     };
 
     kepler = hostNixpkgs.fetchFromGitHub {
