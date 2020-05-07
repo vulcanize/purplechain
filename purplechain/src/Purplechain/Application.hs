@@ -37,7 +37,7 @@ handlersContext :: HandlersContext Secp256k1 PurplechainModules CoreEffs
 handlersContext = HandlersContext
   { signatureAlgP = Proxy
   , modules = purplechainModules
-  , compileToCore  = defaultCompileToCore
+  , compileToCore = defaultCompileToCore
   , anteHandler = baseAppAnteHandler
   }
   where

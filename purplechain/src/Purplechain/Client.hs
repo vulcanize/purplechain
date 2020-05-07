@@ -45,7 +45,7 @@ import qualified Tendermint.SDK.Modules.Bank        as B
 import qualified Tendermint.SDK.Types.Address       as Addr
 import           Tendermint.Utils.Client            ( ClientConfig (..), EmptyTxClient (..), HasQueryClient (..), HasTxClient (..)
                                                     , Signer, QueryClientResponse(..), TxClientResponse, TxOpts(..), defaultClientTxOpts)
-import           Tendermint.Utils.User              (makeSignerFromUser, makeUser)
+import           Tendermint.Utils.User              (User, makeSignerFromUser, makeUser)
 
 import           Purplechain.Application
 import           Purplechain.Module.Message
@@ -103,12 +103,15 @@ performActTx :<|> (burnTx :<|> transferTx) :<|> EmptyTxClient = genClientT
   defaultClientTxOpts
 
 {- Test utils -}
-user1 :: Signer
-user1 = makeSignerFromUser $ makeUser "f65255094d7773ed8dd417badc9fc045c1f80fdc5b2d25172b031ce6933e039a"
+user1 :: User
+user1 = makeUser "f65255094d7773ed8dd417badc9fc045c1f80fdc5b2d25172b031ce6933e039a"
+
+signer1 :: Signer
+signer1 = makeSignerFromUser user1
 
 txOpts :: TxOpts
 txOpts = TxOpts
-  { txOptsSigner = user1
+  { txOptsSigner = signer1
   , txOptsGas = 0
   }
 
