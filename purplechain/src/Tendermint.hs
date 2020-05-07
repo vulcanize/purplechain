@@ -236,9 +236,9 @@ loadNetwork root size = liftIO $ handle onFailure $ do
   where
     onFailure (e :: IOException) = pure $ Left e
 
-
-initNetwork :: MonadIO m => Text -> Word -> m [TendermintNode]
-initNetwork root size = shelly $ do
+initNetwork :: MonadIO m => String -> Word -> m [TendermintNode]
+initNetwork root' size = shelly $ do
+  let root = T.pack root'
   void $ tendermintNetwork $ mkNetworkFlags root size
   for [0..size-1] $ \i -> do
     let
@@ -296,7 +296,7 @@ withNetwork root net f = do
 
   loadNetwork root size >>= \case
     Left _ -> do
-      genesisNodes <- toAppNodes <$> initNetwork root size
+      genesisNodes <- toAppNodes <$> initNetwork (T.unpack root) size
       report "Initialized"
       liftIO $ withAsync (f root genesisNodes) $ \_ ->
         launchNodes genesisNodes
