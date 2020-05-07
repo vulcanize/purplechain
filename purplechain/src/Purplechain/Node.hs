@@ -29,6 +29,7 @@ import GHC.Generics
 import qualified Data.Text as T
 import Shelly                                           (shelly, sleep, run)
 import qualified Shelly                                 as Sh
+import System.Environment                               (getArgs)
 import System.Which                                     (staticWhich)
 
 import qualified Katip                                  as K
@@ -96,3 +97,9 @@ runABCI pn = do
     (mkContext (pn ^. purplechainNode_iavlPorts . iavlPorts_grpc))
     (\cfg -> K.closeScribes (cfg ^. contextLogConfig . KL.logEnv))
     (serveAppWith (serverSettings (fromEnum port) (fromString . T.unpack $ host)) mempty . makeIOApp)
+
+main :: IO ()
+main = do
+  getArgs >>= \case
+    [home] -> runNodeDir mkPurplechainNode _purplechainNode_tendermint withPurplechainNode (T.pack home)
+    _ -> putStrLn "Usage: purplechain <tendermint-node-directory>"

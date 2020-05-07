@@ -1,2 +1,2 @@
 module Main (main) where
-import Purplechain (main)
+import Purplechain.Node (main)

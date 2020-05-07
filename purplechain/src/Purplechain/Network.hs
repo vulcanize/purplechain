@@ -22,18 +22,29 @@ import Purplechain.Client hiding (flip)
 import Purplechain.Node hiding (flip)
 import Purplechain.Module.Keeper hiding (performAct)
 
+seconds :: Int -> Int
+seconds = (* 1e6)
+
+wait :: MonadIO m => Int -> m ()
+wait = liftIO . threadDelay . seconds
+
+
 testNetwork :: IO ()
 testNetwork = do
   initProcess
-  withThrowawayNetwork (purplechainNetwork 1) $ const testScenario
+  withThrowawayNetwork (purplechainNetwork 1) $ \_ nodes -> do
+    wait 7
+    testScenario nodes
 
 testScenario :: [PurplechainNode] -> IO ()
 testScenario nodes = do
-  let seconds = (* 1e6)
-      wait = liftIO . threadDelay . seconds
-      _waiting s x = void $ wait s *> x
   case nodes of
-    (n0 : _) -> flip evalStateT genesisSystem $ do
+    [n] -> testScenario' (n, n, n, n)
+    (n0 : n1 : n2 : n3 : _) -> testScenario' (n0, n1, n2, n3)
+    _ -> pure ()
+
+testScenario' :: (PurplechainNode, PurplechainNode, PurplechainNode, PurplechainNode) -> IO ()
+testScenario' (n0, n1, n2, n3) = flip evalStateT genesisSystem $ do
       let
         printDiff act old new = liftIO $ do
           let
@@ -62,11 +73,9 @@ testScenario nodes = do
               Right r -> pure r
               Left err -> throwError $ "Preview failed: " <> tshow err
 
-            respTx <- tx n performActTx (PerformMsg act actor) >>= \case
+            _ <- tx n performActTx (PerformMsg act actor) >>= \case
               Response sr -> pure sr
               err -> throwError $ "RPC failed: " <> tshow err
-
-            liftIO $ print $ tshow respTx
 
             wait 1
             respQ <- query n0 $ getSystem $ QueryArgs False () 0
@@ -79,9 +88,7 @@ testScenario nodes = do
                   liftIO $ putStrLn "PREVIEW MISMATCH"
                   printDiff act old new
 
-      wait 7
-
-      sequence_ $ intersperse (wait 1)
+      sequence_ $ intersperse (wait 2)
         [
           -- market parameters
           performAct n0 God $ Frob 1.000000000000000001
@@ -91,25 +98,23 @@ testScenario nodes = do
         , performAct n0 God $ Mark collateralTag (Wad 1) (Sec 1)
 
           -- issuance
-        , performAct n0 acc1 $ Open urn1 collateralIlk
-        , performAct n0 acc1 $ Lock urn1 5
-        , performAct n0 acc1 $ Free urn1 1
-        , performAct n0 acc1 $ Draw urn1 2
-        , performAct n0 acc1 $ Wipe urn1 1
+        , performAct n1 acc1 $ Open urn1 collateralIlk
+        , performAct n1 acc1 $ Lock urn1 5
+        , performAct n1 acc1 $ Free urn1 1
+        , performAct n1 acc1 $ Draw urn1 2
+        , performAct n1 acc1 $ Wipe urn1 1
 
           -- urn lifecycle
-        , performAct n0 acc2 $ Open urn2 collateralIlk
-        , performAct n0 acc2 $ Give urn2 addr1
-        , performAct n0 acc1 $ Shut urn2
+        , performAct n2 acc2 $ Open urn2 collateralIlk
+        , performAct n2 acc2 $ Give urn2 addr1
+        , performAct n2 acc1 $ Shut urn2
 
           -- liquidation
-        , performAct n0 God $ Warp (Sec 100)
-        , performAct n0 God $ Bite urn1
-        , performAct n0 God $ Grab urn1
-        , performAct n0 God $ Plop urn1 4
+        , performAct n3 God $ Warp (Sec 100)
+        , performAct n3 God $ Bite urn1
+        , performAct n3 God $ Grab urn1
+        , performAct n3 God $ Plop urn1 4
         ]
-
-    _ -> pure ()
 
 purplechainNetwork :: Word -> AppNetwork PurplechainNode
 purplechainNetwork size = AppNetwork

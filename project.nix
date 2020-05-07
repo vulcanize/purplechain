@@ -47,7 +47,7 @@ let
       super.haskellPackages.override (old: {
         overrides = self.lib.foldr self.lib.composeExtensions (old.overrides or (_: _: {})) [
           (self: super: {
-            purplechain = self.callCabal2nix "purplechain" sources.purplechain {};
+            purplechain = justStaticExecutables (self.callCabal2nix "purplechain" sources.purplechain {});
             which = self.callCabal2nix "which" sources.which {};
           })
           (self: super: {
