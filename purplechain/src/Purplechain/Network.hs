@@ -22,13 +22,17 @@ import Purplechain.Client hiding (flip)
 import Purplechain.Node hiding (flip)
 import Purplechain.Module.Keeper hiding (performAct)
 
-test :: IO ()
-test = do
+testNetwork :: IO ()
+testNetwork = do
+  initProcess
+  withThrowawayNetwork (purplechainNetwork 1) $ const testScenario
+
+testScenario :: [PurplechainNode] -> IO ()
+testScenario nodes = do
   let seconds = (* 1e6)
       wait = liftIO . threadDelay . seconds
       _waiting s x = void $ wait s *> x
-  initProcess
-  withThrowawayNetwork (purplechainNetwork 1) $ \_root -> \case
+  case nodes of
     (n0 : _) -> flip evalStateT genesisSystem $ do
       let
         printDiff act old new = liftIO $ do

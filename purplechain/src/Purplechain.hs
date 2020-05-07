@@ -10,4 +10,4 @@ import Purplechain.Network
 import Purplechain.Node
 
 main :: IO ()
-main = test
+main = testNetwork
