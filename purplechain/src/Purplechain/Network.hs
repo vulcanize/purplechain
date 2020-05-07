@@ -69,7 +69,6 @@ test = do
 
             wait 1
             respQ <- query n0 $ getSystem $ QueryArgs False () 0
-            printDiff act old preview
 
             case unQuery respQ of
               Nothing -> throwError $ "Query failed: " <> tshow respQ

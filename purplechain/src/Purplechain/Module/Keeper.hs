@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -10,7 +11,13 @@
 module Purplechain.Module.Keeper where
 
 import Control.Arrow        (left)
+import Control.Lens         (ifor_, (^.))
+import Data.Foldable        (for_)
+import qualified Data.Map   as Map
 import Data.Maybe           (fromMaybe)
+import Data.Semialign       (align)
+import qualified Data.Text   as T
+import Data.These           (These(..))
 
 import Maker                hiding (Error)
 import Polysemy             (Sem, Member, Members, interpret, makeSem)
@@ -48,6 +55,32 @@ eval = mapError BA.makeAppError . evalPurplechain
         currentSystem <- fromMaybe genesis <$> V.takeVar systemVar
         newSystem <- fromEither $ left (PurplechainError . tshow) $ exec currentSystem action
         V.putVar newSystem systemVar
+
+        let balanceDiffs = minimizeDiff $ align (currentSystem ^. balances) (newSystem ^. balances)
+            minimizeDiff = Map.filter $ \case
+              These a b -> a /= b
+              _ -> True
+            showDiff label subject (before, after) = T.unwords
+              [ label
+              , subject <> ":"
+              , before
+              , "->"
+              , after
+              ]
+            showStage sys urnId = case getStage sys (Id urnId) of
+              Left err -> "Error (" <> tshow err <> ")"
+              Right s -> tshow s
+
+        BA.log BA.Info $ "Actor: " <> tshow actor
+        BA.log BA.Info $ "Act: " <> tshow act
+
+        for_ (Map.keys $ newSystem ^. urns) $ \(Id urnId) ->
+          BA.log BA.Info $ showDiff "Stage of" (T.pack urnId) (showStage currentSystem urnId, showStage newSystem urnId)
+
+        ifor_ balanceDiffs $ \(owner, token) -> BA.log BA.Info . showDiff "Balance of" (tshow (owner,token)) . \case
+          This old -> (tshow old, "N/A")
+          That new -> ("N/A", tshow new)
+          These old new -> (tshow old, tshow new)
 
 --TODO: is there a genesis hook?
 genesis :: System

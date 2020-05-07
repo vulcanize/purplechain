@@ -31,10 +31,13 @@ import Shelly                                           (shelly, sleep, run)
 import qualified Shelly                                 as Sh
 import System.Which                                     (staticWhich)
 
+import qualified Katip                                  as K
+import qualified Tendermint.SDK.BaseApp.Logger.Katip    as KL
 import Maker
 import Network.ABCI.Server                              (serveAppWith)
 import Tendermint
 import Tendermint.Config
+import Tendermint.SDK.BaseApp                           (contextLogConfig)
 import Tendermint.SDK.BaseApp.Query.Types               (QueryArgs(..))
 
 import Purplechain.Application                          (mkContext, makeIOApp)
@@ -88,9 +91,8 @@ runIAVL root (IAVLPorts grpcPort gatewayPort) = do
 
 runABCI :: PurplechainNode -> IO ()
 runABCI pn = do
-  let
-    cfg = pn ^. purplechainNode_tendermint . tendermintNode_config
-    (host, port) = unsafeHostPortFromURI $ cfg ^. config_proxyApp
-  ctx <- mkContext (pn ^. purplechainNode_iavlPorts . iavlPorts_grpc)
-  serveAppWith (serverSettings (fromEnum port) (fromString . T.unpack $ host)) mempty $
-    makeIOApp ctx
+  let (host, port) = unsafeHostPortFromURI $ pn ^. purplechainNode_tendermint . tendermintNode_config . config_proxyApp
+  bracket
+    (mkContext (pn ^. purplechainNode_iavlPorts . iavlPorts_grpc))
+    (\cfg -> K.closeScribes (cfg ^. contextLogConfig . KL.logEnv))
+    (serveAppWith (serverSettings (fromEnum port) (fromString . T.unpack $ host)) mempty . makeIOApp)

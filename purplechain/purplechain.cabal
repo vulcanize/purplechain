@@ -34,6 +34,7 @@ library
                      , hs-abci-types
                      , hs-iavl-client
                      , hs-tendermint-client
+                     , katip
                      , lens
                      , mkrfuzz
                      , modern-uri
@@ -41,10 +42,12 @@ library
                      , polysemy
                      , pretty
                      , proto3-suite
+                     , semialign
                      , servant
                      , shelly
                      , string-conversions
                      , text
+                     , these
                      , tomland
                      , transformers
                      , tree-diff
