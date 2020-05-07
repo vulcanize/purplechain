@@ -22,7 +22,7 @@ data PerformMsg' act actor = PerformMsg
   , _performMsg_actor :: actor
   } deriving (Eq, Ord, Read, Show, Generic)
 
-type PerformMsg = PerformMsg' Act (Maybe Actor)
+type PerformMsg = PerformMsg' Act Actor
 type PerformMsgProto = PerformMsg' Text Text
 
 instance Message PerformMsgProto

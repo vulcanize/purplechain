@@ -44,7 +44,7 @@ eval = mapError BA.makeAppError . evalPurplechain
       => Sem (PurplechainKeeper ': r) a -> Sem r a
     evalPurplechain = interpret $ \case
       PerformAct (PerformMsg act actor) -> do
-        let action = maybe id being actor $ perform act
+        let action = being actor $ perform act
         currentSystem <- fromMaybe genesis <$> V.takeVar systemVar
         newSystem <- fromEither $ left (PurplechainError . tshow) $ exec currentSystem action
         V.putVar newSystem systemVar

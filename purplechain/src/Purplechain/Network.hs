@@ -57,7 +57,7 @@ test = do
         performAct n actor act = printErrors <=< runExceptT $ do
             old <- get
 
-            preview <- case exec old (maybe id being actor $ perform act) of
+            preview <- case exec old (being actor $ perform act) of
               Right r -> pure r
               Left err -> throwError $ "Preview failed: " <> tshow err
 
@@ -83,35 +83,35 @@ test = do
 
       sequence_ $ intersperse (wait 1)
         -- genesis mining
-        [ performAct n0 Nothing $ Mine collateralTag
-        , performAct n0 Nothing $ Hand addr1 (Wad 100000) (Gem collateralTag)
-        , performAct n0 Nothing $ Hand addr2 (Wad 100000) (Gem collateralTag)
+        [ performAct n0 God $ Mine collateralTag
+        , performAct n0 God $ Hand addr1 (Wad 100000) (Gem collateralTag)
+        , performAct n0 God $ Hand addr2 (Wad 100000) (Gem collateralTag)
 
         -- market parameters
-        , performAct n0 Nothing $ Frob 1.000000000000000001
-        , performAct n0 Nothing $ Tell 1.01
-        , performAct n0 Nothing $ Form collateralIlk collateralTag
-        , performAct n0 Nothing $ Cork collateralIlk 100
-        , performAct n0 Nothing $ Mark collateralTag (Wad 1) (Sec 1)
+        , performAct n0 God $ Frob 1.000000000000000001
+        , performAct n0 God $ Tell 1.01
+        , performAct n0 God $ Form collateralIlk collateralTag
+        , performAct n0 God $ Cork collateralIlk 100
+        , performAct n0 God $ Mark collateralTag (Wad 1) (Sec 1)
 
         -- issuance
-        , performAct n0 (Just acc1) $ Open urn1 collateralIlk
-        , performAct n0 (Just acc1) $ Lock urn1 50
-        , performAct n0 (Just acc1) $ Free urn1 10
-        , performAct n0 (Just acc1) $ Draw urn1 20
-        , performAct n0 (Just acc1) $ Wipe urn1 10
+        , performAct n0 acc1 $ Open urn1 collateralIlk
+        , performAct n0 acc1 $ Lock urn1 50
+        , performAct n0 acc1 $ Free urn1 10
+        , performAct n0 acc1 $ Draw urn1 20
+        , performAct n0 acc1 $ Wipe urn1 10
 
         -- urn lifecycle
-        , performAct n0 (Just acc2) $ Open urn2 collateralIlk
-        , performAct n0 (Just acc2) $ Give urn2 addr1
-        , performAct n0 (Just acc1) $ Shut urn2
+        , performAct n0 acc2 $ Open urn2 collateralIlk
+        , performAct n0 acc2 $ Give urn2 addr1
+        , performAct n0 acc1 $ Shut urn2
 
         -- liquidation
-        , performAct n1 Nothing $ Warp (Sec 100)
-        , performAct n0 Nothing $ Bite urn1
-        , performAct n0 Nothing $ Grab urn1
-        , performAct n0 Nothing $ Plop urn1 40
-        , performAct n0 Nothing Loot
+        , performAct n1 God $ Warp (Sec 100)
+        , performAct n0 God $ Bite urn1
+        , performAct n0 God $ Grab urn1
+        , performAct n0 God $ Plop urn1 40
+        , performAct n0 God Loot
 
         ]
 
