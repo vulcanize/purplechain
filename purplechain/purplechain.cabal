@@ -34,6 +34,7 @@ library
                      , hs-abci-types
                      , hs-iavl-client
                      , hs-tendermint-client
+                     , katip
                      , lens
                      , mkrfuzz
                      , modern-uri
@@ -41,11 +42,14 @@ library
                      , polysemy
                      , pretty
                      , proto3-suite
+                     , semialign
                      , servant
                      , shelly
                      , string-conversions
                      , text
+                     , these
                      , tomland
+                     , transformers
                      , tree-diff
                      , which
 
@@ -58,6 +62,8 @@ library
                        Purplechain.Module.Router
                        Purplechain.Module.Query
                        Purplechain.Module.Types
+                       Purplechain.Network
+                       Purplechain.Node
                        Tendermint
                        Tendermint.Config
   ghc-options:         -Wall

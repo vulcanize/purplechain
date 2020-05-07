@@ -1,8 +1,8 @@
-#cabal
+# cabal
 dist
 dist-newstyle
 
-#nix
+# nix
 result
 result-*
 
@@ -11,3 +11,6 @@ result-*
 
 # iavl
 test.db
+
+# emacs
+.#*

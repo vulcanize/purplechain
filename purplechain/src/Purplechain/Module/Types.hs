@@ -1,7 +1,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -16,7 +15,6 @@ import Data.Fixed                                       (HasResolution)
 import Data.TreeDiff.Class
 import Data.Text                                        (Text)
 import Data.Word (Word64)
-import GHC.Generics                                     (Generic)
 
 import Maker
 import Maker.Decimal
@@ -52,12 +50,6 @@ instance BA.IsAppError PurplechainError where
       , BA.appErrorCodespace = "purplechain"
       , BA.appErrorMessage = msg
       }
-
-data PurplechainEvent = PurplechainEvent Text
-  deriving (Eq, Ord, Read, Show, Generic)
-
-instance BA.ToEvent PurplechainEvent
-
 
 newtype BlockHeight = BlockHeight Word64
   deriving newtype (Enum, Num, BA.QueryData)

@@ -12,8 +12,8 @@ let
     purple = hostNixpkgs.fetchFromGitHub {
       owner = "vulcanize";
       repo = "purple";
-      rev = "398eee7219daf6f21e84c68df1ed768bdf14cde1";
-      sha256 = "1mmp5xg078fqbk9mchvg4ig9jka8kzdxgqzs4lw39d88qrc1cg6c";
+      rev = "d14fd7335e2a25c7fa1dd700edad7edefd813b38";
+      sha256 = "1wj7f9rpi7wqnlvss7gm8p2pb44cyiiivazhaxp36bn2dms8vhn0";
     };
 
     kepler = hostNixpkgs.fetchFromGitHub {
@@ -37,7 +37,7 @@ let
       sha256 = "0khnczrrcw4ywb750iqfd8v8z2p871b2s6rxbi67inkdc85y1dn4";
     };
 
-    purplechain = gitignoreSource ./.;
+    purplechain = gitignoreSource ./purplechain;
   };
 
   gitignoreSource = (import sources.gitignore {}).gitignoreSource;

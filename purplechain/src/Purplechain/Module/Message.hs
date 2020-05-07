@@ -17,27 +17,28 @@ import Tendermint.SDK.Codec         (HasCodec(..))
 
 import Tendermint
 
-data PerformMsg' act = PerformMsg
+data PerformMsg' act actor = PerformMsg
   { _performMsg_act :: act
-  } deriving Generic
+  , _performMsg_actor :: actor
+  } deriving (Eq, Ord, Read, Show, Generic)
 
-type PerformMsg = PerformMsg' Act
-type PerformMsgProto = PerformMsg' Text
+type PerformMsg = PerformMsg' Act Actor
+type PerformMsgProto = PerformMsg' Text Text
 
 instance Message PerformMsgProto
 instance Named PerformMsgProto
 
-instance HasMessageType (PerformMsg' a) where
+instance HasMessageType (PerformMsg' act actor) where
   messageType _ = "PerformMsg"
 
 instance HasCodec PerformMsg where
-  encode (PerformMsg act) =
-    view strict . toLazyByteString . PerformMsg $ tshow act
+  encode (PerformMsg act actor) =
+    view strict . toLazyByteString $ PerformMsg (tshow act) (tshow actor)
 
   decode = f <=< left (formatMessageParseError . coerceProto3Error) . fromByteString
-    where f (PerformMsg txt) = tread txt
-            & note ("Cannot parse 'Act' from: " <> txt)
-            & fmap PerformMsg
+    where f (PerformMsg act actor) = pure PerformMsg
+            <*> (tread act & note ("Cannot parse 'Act' from: " <> act))
+            <*> (tread actor & note ("Cannot parse 'Actor' from: " <> actor))
 
 instance ValidateMessage PerformMsg where
   validateMessage _ = pure ()
