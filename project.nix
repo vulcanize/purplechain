@@ -12,7 +12,7 @@ let
     purple = hostNixpkgs.fetchFromGitHub {
       owner = "vulcanize";
       repo = "purple";
-      rev = "d14fd7335e2a25c7fa1dd700edad7edefd813b38";
+      rev = "17c487d8d6f0955a7d9042523653ae4769ffd923";
       sha256 = "1wj7f9rpi7wqnlvss7gm8p2pb44cyiiivazhaxp36bn2dms8vhn0";
     };
 
