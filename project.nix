@@ -19,8 +19,8 @@ let
     kepler = hostNixpkgs.fetchFromGitHub {
       owner = "f-o-a-m";
       repo = "kepler";
-      rev = "d042c3a780a75d67e5b42fbc3b56a8992443b998";
-      sha256 = "0pjhg203lrvz9rji8iwfpfsdvqxjnygm4m7jrd030zxjkhjngfqy";
+      rev = "c72f16901459c24e5854a955df78ce15e66f009a";
+      sha256 = "1jhjmj1ccrwsppf9q0j821wrmmahhnagspj5bard18qia347z5x5";
     };
 
     gitignore = hostNixpkgs.fetchFromGitHub {
@@ -61,7 +61,7 @@ let
 
   overlays = builtins.concatLists [
     (import (sources.purple + /project.nix) {}).overlays
-    (import (sources.kepler + /default.nix) {}).overlays
+    (import (sources.kepler + /nix/project.nix) {}).overlays
     [overlay]
   ];
 
