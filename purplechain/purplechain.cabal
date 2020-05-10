@@ -40,6 +40,7 @@ library
                      , modern-uri
                      , mtl
                      , polysemy
+                     , polysemy-plugin
                      , pretty
                      , proto3-suite
                      , semialign
@@ -66,7 +67,7 @@ library
                        Purplechain.Node
                        Tendermint
                        Tendermint.Config
-  ghc-options:         -Wall
+  ghc-options:         -Wall -fplugin=Polysemy.Plugin
 
 executable purplechain
   main-is:             Main.hs
