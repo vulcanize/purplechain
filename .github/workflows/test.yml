@@ -9,3 +9,4 @@ jobs:
     - uses: actions/checkout@v2
     - uses: cachix/install-nix-action@v8
     - run: nix-build
+    - run: make dev"
