@@ -67,6 +67,11 @@ let
 
   pkgs = import sources.pinnedNixpkgs { inherit overlays; };
 
+  dockerImage = with pkgs; dockerTools.buildImage {
+    name = "purplechain";
+    tag = "dev";
+    contents = [bash coreutils haskellPackages.purplechain];
+  };
 in {
-  inherit pkgs overlays;
+  inherit dockerImage pkgs overlays;
 }

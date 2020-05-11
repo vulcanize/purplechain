@@ -57,11 +57,13 @@ data IAVLPorts = IAVLPorts
 makeLenses ''PurplechainNode
 makeLenses ''IAVLPorts
 
-mkPurplechainNode :: TendermintNode -> PurplechainNode
-mkPurplechainNode tn = PurplechainNode tn iavlPorts
+mkPurplechainNode :: NodeEnvironment -> TendermintNode -> PurplechainNode
+mkPurplechainNode env tn = PurplechainNode tn iavlPorts
   where
-    iavlPorts = IAVLPorts (proxyAppPort + 1) (proxyAppPort + 2)
-    (_, proxyAppPort) = unsafeHostPortFromURI $ tn ^. tendermintNode_config . config_proxyApp
+    startingPort = case env of
+      NodeEnvironment_Container -> 8090
+      NodeEnvironment_Thread -> succ $ snd $ unsafeHostPortFromURI $ tn ^. tendermintNode_config . config_proxyApp
+    iavlPorts = IAVLPorts (startingPort + 0) (startingPort + 1)
 
 withPurplechainNode :: MonadIO m => PurplechainNode -> m ()
 withPurplechainNode pn = liftIO $ do
@@ -101,5 +103,5 @@ runABCI pn = do
 main :: IO ()
 main = do
   getArgs >>= \case
-    [home] -> runNodeDir mkPurplechainNode _purplechainNode_tendermint withPurplechainNode (T.pack home)
+    [home] -> runNodeDir (mkPurplechainNode NodeEnvironment_Container) _purplechainNode_tendermint withPurplechainNode (T.pack home)
     _ -> putStrLn "Usage: purplechain <tendermint-node-directory>"
