@@ -10,5 +10,7 @@ watch:
 	./make watch
 hoogle:
 	./make hoogle
-tmux:
+tmux: force
 	./tmux
+
+force:
