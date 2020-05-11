@@ -72,6 +72,13 @@ let
     tag = "dev";
     contents = [bash coreutils haskellPackages.purplechain];
   };
+
+  shell = with pkgs.haskellPackages; shellFor {
+    withHoogle = true;
+    packages = p: [ p.purplechain ];
+    nativeBuildInputs = [ cabal-install ghcid hlint ] ++ (with pkgs; [docker-compose iavl tmux]);
+  };
+
 in {
-  inherit dockerImage pkgs overlays;
+  inherit dockerImage overlays pkgs shell;
 }
