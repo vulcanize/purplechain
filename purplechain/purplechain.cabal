@@ -42,6 +42,7 @@ library
                      , polysemy
                      , polysemy-plugin
                      , pretty
+                     , process
                      , proto3-suite
                      , semialign
                      , servant
