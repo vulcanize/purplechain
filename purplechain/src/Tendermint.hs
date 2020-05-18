@@ -329,5 +329,7 @@ withNetwork root net f = do
 withThrowawayNetwork :: AppNetwork node -> (Text -> [node] -> IO ()) -> IO ()
 withThrowawayNetwork net f = withTempDir $ \x -> withNetwork x net f
 
-withLocalNetwork :: AppNetwork node -> (Text -> [node] -> IO ()) -> IO ()
-withLocalNetwork net f = withCurrentDir $ \x -> withNetwork x net f
+-- Cannot resume network
+-- https://github.com/f-o-a-m/kepler/issues/217
+_withLocalNetwork :: AppNetwork node -> (Text -> [node] -> IO ()) -> IO ()
+_withLocalNetwork net f = withCurrentDir $ \x -> withNetwork x net f
