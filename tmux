@@ -13,11 +13,11 @@ $TMUX detach
 
 set -euo pipefail
 
-echo $'\nBuilding purplechain... might take a while if not cached...'
-nix-build
+echo $'\nBuilding purplechain... might take a while if not cached yet...'
+nix-build -A purplechain
 
-echo $'\nBuilding docker image... might take a while if not cached...'
-nix-build project.nix -A dockerImage
+echo $'\nBuilding docker image... might take a while if not cached yet...'
+nix-build -A dockerImage
 
 echo $'\nLoading docker image...'
 docker load -i $(nix-build project.nix -A dockerImage)
