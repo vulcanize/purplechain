@@ -9,6 +9,13 @@ This repo provides
 - a docker image for purplechain nodes
 - a tmux script for running a network
 
+## Demo
+An [asciinema](https://asciinema.org/) recording is available showcasing the devnet.
+The tmux session shown has one panel for each node (run in its own Docker container), where the middle-right pane is the only non-validator node.
+The bottom panel initializes the devnet and is used for issuing transactions/queries.
+
+[![asciicast](https://asciinema.org/a/eXBTxfr5GrAG5JKmjxT7hG78V.svg)](https://asciinema.org/a/eXBTxfr5GrAG5JKmjxT7hG78V)
+
 ## Dependencies
 ### Docker
 You will need to have Docker installed and configured on your machine if you want to run each node in a separate container.
@@ -24,7 +31,5 @@ Once you have Nix installed, you can run `make dev` to get a working environment
 You can also run `nix-shell` to enter a nix shell with dependencies for the project setup in the environment, and then use a more custom workflow.
 
 If you have Docker setup, you can then run `make tmux` for a "production-like" environment.
-It will launch a `tmux` session with one panel for each node (to be run in a Docker container).
-Network/node initialization is automatically handled - manual intervention should only be needed for launching/stopping nodes and issuing transactions/queries on the bottom panel.
 
 For more fine-grained commands, see the [Makefile](Makefile).
