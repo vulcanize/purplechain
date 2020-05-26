@@ -7,6 +7,7 @@ This repo provides
 - a Purplechain Cosmos SDK module
 - a Purplechain node binary
 - a docker image for purplechain nodes
+- a tmux script for running a network
 
 ## Dependencies
 ### Docker
@@ -18,12 +19,12 @@ All other dependencies (except Docker) are handled by Nix. Note that Nix does no
 
 ## Development
 For development purposes, it is possible to simply execute each node in a separate thread listening on localhost ports.
-Once you have Nix installed, you can run `make dev` to get a working environment with a hoogle server and an auto-reloading testnet.
+Once you have Nix installed, you can run `make dev` to get a working environment with a hoogle server and an auto-reloading devnet.
 
 You can also run `nix-shell` to enter a nix shell with dependencies for the project setup in the environment, and then use a more custom workflow.
 
 If you have Docker setup, you can then run `make tmux` for a "production-like" environment.
 It will launch a `tmux` session with one panel for each node (to be run in a Docker container).
-Testnet/node initialization is automatically handled - manual intervention should only be needed for launching/stopping nodes and issuing transactions/queries on the bottom panel.
+Network/node initialization is automatically handled - manual intervention should only be needed for launching/stopping nodes and issuing transactions/queries on the bottom panel.
 
 For more fine-grained commands, see the [Makefile](Makefile).
