@@ -20,7 +20,7 @@ in {
   dev = mkScript "dev.sh" ''
     ${snippets.hoogle} > /dev/null &
     HOOGLE_PID=$!
-    ${snippets.watch} --run="testNetwork"
+    ${snippets.watch} --run="testThreads"
     kill "$HOOGLE_PID"
   '';
   hoogle = mkScript "hoogle.sh" snippets.hoogle;

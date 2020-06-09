@@ -28,11 +28,10 @@ seconds = (* 1e6)
 wait :: MonadIO m => Int -> m ()
 wait = liftIO . threadDelay . seconds
 
-
-testNetwork :: IO ()
-testNetwork = do
+testThreads :: IO ()
+testThreads = do
   initProcess
-  withThrowawayNetwork (purplechainNetwork 1) $ \_ nodes -> do
+  withThrowawayNetwork (purplechainNetwork 2 NodeEnvironment_Thread) $ \_ nodes -> do
     wait 7
     testScenario nodes
 
@@ -40,6 +39,7 @@ testScenario :: [PurplechainNode] -> IO ()
 testScenario nodes = do
   case nodes of
     [n] -> testScenario' (n, n, n, n)
+    [n0, n1] -> testScenario' (n0, n1, n0, n1)
     (n0 : n1 : n2 : n3 : _) -> testScenario' (n0, n1, n2, n3)
     _ -> pure ()
 
@@ -116,10 +116,11 @@ testScenario' (n0, n1, n2, n3) = flip evalStateT genesisSystem $ do
         , performAct n3 God $ Plop urn1 4
         ]
 
-purplechainNetwork :: Word -> AppNetwork PurplechainNode
-purplechainNetwork size = AppNetwork
-  { _appNetwork_toAppNode = mkPurplechainNode
+purplechainNetwork :: Word -> NodeEnvironment -> AppNetwork PurplechainNode
+purplechainNetwork size env = AppNetwork
+  { _appNetwork_toAppNode = mkPurplechainNode env
   , _appNetwork_fromAppNode = _purplechainNode_tendermint
   , _appNetwork_withNode = withPurplechainNode
   , _appNetwork_size = size
+  , _appNetwork_nodeEnvironment = env
   }

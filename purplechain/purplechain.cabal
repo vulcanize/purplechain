@@ -40,7 +40,9 @@ library
                      , modern-uri
                      , mtl
                      , polysemy
+                     , polysemy-plugin
                      , pretty
+                     , process
                      , proto3-suite
                      , semialign
                      , servant
@@ -66,7 +68,7 @@ library
                        Purplechain.Node
                        Tendermint
                        Tendermint.Config
-  ghc-options:         -Wall
+  ghc-options:         -Wall -fplugin=Polysemy.Plugin
 
 executable purplechain
   main-is:             Main.hs
@@ -74,3 +76,4 @@ executable purplechain
   default-language:    Haskell2010
   build-depends:       base >=4.12 && <4.13
                      , purplechain
+  ghc-options:         -threaded

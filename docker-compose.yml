@@ -1,0 +1,50 @@
+version: '3.4'
+
+x-node: &node
+  image: purplechain:dev
+  command: purplechain /tendermint
+
+services:
+  node0:
+    <<: *node
+    container_name: node0
+    ports:
+      - "26656-26657:26656-26657"
+    networks:
+      localnet:
+        ipv4_address: 192.167.10.2
+
+  node1:
+    <<: *node
+    container_name: node1
+    ports:
+      - "26659-26660:26656-26657"
+    networks:
+      localnet:
+        ipv4_address: 192.167.10.3
+
+  node2:
+    <<: *node
+    container_name: node2
+    ports:
+      - "26662-26663:26656-26657"
+    networks:
+      localnet:
+        ipv4_address: 192.167.10.4
+
+  node3:
+    <<: *node
+    container_name: node3
+    ports:
+      - "26665-26666:26656-26657"
+    networks:
+      localnet:
+        ipv4_address: 192.167.10.5
+
+networks:
+  localnet:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 192.167.10.0/16

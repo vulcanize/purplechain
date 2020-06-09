@@ -27,9 +27,9 @@ import Data.String                                      (IsString(..))
 import Data.Text                                        (Text)
 import GHC.Generics
 import qualified Data.Text as T
-import Shelly                                           (shelly, sleep, run)
-import qualified Shelly                                 as Sh
+import Shelly                                           (shelly, sleep)
 import System.Environment                               (getArgs)
+import System.Process                                   (createProcess, getPid, shell, spawnProcess, terminateProcess, waitForProcess)
 import System.Which                                     (staticWhich)
 
 import qualified Katip                                  as K
@@ -57,11 +57,13 @@ data IAVLPorts = IAVLPorts
 makeLenses ''PurplechainNode
 makeLenses ''IAVLPorts
 
-mkPurplechainNode :: TendermintNode -> PurplechainNode
-mkPurplechainNode tn = PurplechainNode tn iavlPorts
+mkPurplechainNode :: NodeEnvironment -> TendermintNode -> PurplechainNode
+mkPurplechainNode env tn = PurplechainNode tn iavlPorts
   where
-    iavlPorts = IAVLPorts (proxyAppPort + 1) (proxyAppPort + 2)
-    (_, proxyAppPort) = unsafeHostPortFromURI $ tn ^. tendermintNode_config . config_proxyApp
+    startingPort = case env of
+      NodeEnvironment_Container -> 8090
+      NodeEnvironment_Thread -> succ $ snd $ unsafeHostPortFromURI $ tn ^. tendermintNode_config . config_proxyApp
+    iavlPorts = IAVLPorts (startingPort + 0) (startingPort + 1)
 
 withPurplechainNode :: MonadIO m => PurplechainNode -> m ()
 withPurplechainNode pn = liftIO $ do
@@ -71,24 +73,32 @@ withPurplechainNode pn = liftIO $ do
     shelly $ sleep 3
     runABCI pn
 
-iavlServerPath :: Sh.FilePath
-iavlServerPath = Sh.fromText $ T.pack $(staticWhich "iavlserver")
+iavlServerPath :: IsString s => s
+iavlServerPath = fromString $(staticWhich "iavlserver")
 
 runIAVL :: Text -> IAVLPorts -> IO ()
 runIAVL root (IAVLPorts grpcPort gatewayPort) = do
-  let iavl = print <=< shelly $ run iavlServerPath $ fold
+  let
+    iavl = do
+      spawnProcess iavlServerPath $ fold
         [ ["-db-name", "test"]
-        , ["-datadir", root <> "/test.db"]
-        , ["-grpc-endpoint", "0.0.0.0" <> ":" <> tshow grpcPort]
-        , ["-gateway-endpoint", "0.0.0.0" <> ":" <> tshow gatewayPort ]
+        , ["-datadir", T.unpack root <> "/test.db"]
+        , ["-grpc-endpoint", "0.0.0.0" <> ":" <> show grpcPort]
+        , ["-gateway-endpoint", "0.0.0.0" <> ":" <> show gatewayPort ]
         ]
-  iavl
+
+    terminateProcess' p = do
+      terminateProcess p
+      getPid p >>= \case
+        Nothing -> pure ()
+        Just pid -> void $ createProcess $ shell $ "kill -KILL " <> show pid
+
+  void $ bracket iavl terminateProcess' waitForProcess
     & handle (\(e :: SomeException) -> do
                  putStrLn "ERROR IN RUNIAVL"
                  putStrLn ("::: " <> show e <> " :::")
                  error ""
              )
-  pure ()
 
 runABCI :: PurplechainNode -> IO ()
 runABCI pn = do
@@ -101,5 +111,5 @@ runABCI pn = do
 main :: IO ()
 main = do
   getArgs >>= \case
-    [home] -> runNodeDir mkPurplechainNode _purplechainNode_tendermint withPurplechainNode (T.pack home)
+    [home] -> runNodeDir (mkPurplechainNode NodeEnvironment_Container) _purplechainNode_tendermint withPurplechainNode (T.pack home)
     _ -> putStrLn "Usage: purplechain <tendermint-node-directory>"

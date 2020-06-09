@@ -12,15 +12,15 @@ let
     purple = hostNixpkgs.fetchFromGitHub {
       owner = "vulcanize";
       repo = "purple";
-      rev = "d14fd7335e2a25c7fa1dd700edad7edefd813b38";
+      rev = "17c487d8d6f0955a7d9042523653ae4769ffd923";
       sha256 = "1wj7f9rpi7wqnlvss7gm8p2pb44cyiiivazhaxp36bn2dms8vhn0";
     };
 
     kepler = hostNixpkgs.fetchFromGitHub {
       owner = "f-o-a-m";
       repo = "kepler";
-      rev = "d042c3a780a75d67e5b42fbc3b56a8992443b998";
-      sha256 = "0pjhg203lrvz9rji8iwfpfsdvqxjnygm4m7jrd030zxjkhjngfqy";
+      rev = "c72f16901459c24e5854a955df78ce15e66f009a";
+      sha256 = "1jhjmj1ccrwsppf9q0j821wrmmahhnagspj5bard18qia347z5x5";
     };
 
     gitignore = hostNixpkgs.fetchFromGitHub {
@@ -61,12 +61,24 @@ let
 
   overlays = builtins.concatLists [
     (import (sources.purple + /project.nix) {}).overlays
-    (import (sources.kepler + /default.nix) {}).overlays
+    (import (sources.kepler + /nix/project.nix) {}).overlays
     [overlay]
   ];
 
   pkgs = import sources.pinnedNixpkgs { inherit overlays; };
 
+  dockerImage = with pkgs; dockerTools.buildImage {
+    name = "purplechain";
+    tag = "dev";
+    contents = [bash coreutils haskellPackages.purplechain];
+  };
+
+  shell = with pkgs.haskellPackages; shellFor {
+    withHoogle = true;
+    packages = p: [ p.purplechain ];
+    nativeBuildInputs = [ cabal-install ghcid hlint ] ++ (with pkgs; [docker-compose iavl tmux]);
+  };
+
 in {
-  inherit pkgs overlays;
+  inherit dockerImage overlays pkgs shell;
 }

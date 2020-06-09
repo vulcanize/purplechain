@@ -88,6 +88,12 @@ localhost = "127.0.0.1"
 localhostRText :: RText 'Host
 localhostRText = fromMaybe (error "localhostRText: invalid IP") $ mkHost localhost
 
+everyInterface :: Text
+everyInterface = "0.0.0.0"
+
+everyInterfaceRText :: RText 'Host
+everyInterfaceRText = fromMaybe (error "everyInterfaceRText: invalid IP") $ mkHost everyInterface
+
 unsafeHostPortFromURI :: URI -> (Text, Word)
 unsafeHostPortFromURI uri = (h,p)
   where
@@ -105,11 +111,17 @@ cleave sep str =
 
 {- CLI -}
 
+data NodeEnvironment
+  = NodeEnvironment_Thread
+  | NodeEnvironment_Container
+  deriving (Eq, Ord, Read, Show, Enum, Bounded, Generic)
+
 data AppNetwork a = AppNetwork
   { _appNetwork_toAppNode :: TendermintNode -> a
   , _appNetwork_fromAppNode :: a -> TendermintNode
   , _appNetwork_withNode :: a -> IO ()
   , _appNetwork_size :: Word
+  , _appNetwork_nodeEnvironment :: NodeEnvironment
   }
 
 data TendermintNode = TendermintNode
@@ -126,6 +138,7 @@ data NetworkFlags = NetworkFlags
   { _networkFlags_validators    :: Word
   , _networkFlags_output        :: Text
   , _networkFlags_populatePeers :: Bool
+  , _networkFlags_startingIP    :: Text
   } deriving (Eq, Ord, Read, Show, Generic)
 
 concat <$> traverse makeLenses
@@ -134,11 +147,14 @@ concat <$> traverse makeLenses
   , ''NetworkFlags
   ]
 
-mkNetworkFlags :: Text -> Word -> NetworkFlags
-mkNetworkFlags networkRoot size = NetworkFlags
+mkNetworkFlags :: NodeEnvironment -> Text -> Word -> NetworkFlags
+mkNetworkFlags env networkRoot size = NetworkFlags
   { _networkFlags_validators    = size
   , _networkFlags_output        = networkRoot
   , _networkFlags_populatePeers = True
+  , _networkFlags_startingIP    = case env of
+      NodeEnvironment_Container -> "192.167.10.2"
+      NodeEnvironment_Thread -> localhost
   }
 
 loadTendermintNode :: MonadIO m => Text -> m TendermintNode
@@ -167,7 +183,7 @@ tendermintNetwork :: NetworkFlags -> Sh Text
 tendermintNetwork nf = run tendermintPath $ ("testnet" :) $
   [ "--v", tshow $ _networkFlags_validators nf
   , "--o", _networkFlags_output nf
-  , "--starting-ip-address", localhost
+  , "--starting-ip-address", _networkFlags_startingIP nf
   ] <> bool [] ["--populate-persistent-peers"] (_networkFlags_populatePeers nf)
 
 tendermintNode :: GlobalFlags -> Sh Text
@@ -236,10 +252,10 @@ loadNetwork root size = liftIO $ handle onFailure $ do
   where
     onFailure (e :: IOException) = pure $ Left e
 
-initNetwork :: MonadIO m => String -> Word -> m [TendermintNode]
-initNetwork root' size = shelly $ do
+initNetwork :: MonadIO m => NodeEnvironment -> String -> Word -> m [TendermintNode]
+initNetwork env root' size = shelly $ do
   let root = T.pack root'
-  void $ tendermintNetwork $ mkNetworkFlags root size
+  void $ tendermintNetwork $ mkNetworkFlags env root size
   for [0..size-1] $ \i -> do
     let
       home = root <> "/node" <> tshow i
@@ -260,12 +276,18 @@ initNetwork root' size = shelly $ do
 
     let cfg = oldCfg
           & config_moniker .~ "node" <> tshow i
-          & updatePorts ports
-          & config_p2p . configP2P_persistentPeers .~ peers'
-          & config_p2p . configP2P_privatePeerIds .~ peers'
           & config_p2p . configP2P_addrBookStrict .~ False
-          & config_p2p . configP2P_allowDuplicateIp .~ True
           & config_consensus . configConsensus_createEmptyBlocksInterval .~ "10s"
+          & case env of
+              NodeEnvironment_Container -> id
+              NodeEnvironment_Thread -> config_p2p . configP2P_allowDuplicateIp .~ True
+          & case env of
+              NodeEnvironment_Container -> config_rpc . configRPC_laddr . uriAuthority . _Right . authHost .~ everyInterfaceRText
+              NodeEnvironment_Thread -> foldl (.) id
+                [ updatePorts ports
+                , config_p2p . configP2P_persistentPeers .~ peers'
+                , config_p2p . configP2P_privatePeerIds .~ peers'
+                ]
 
     storeConfig home cfg
     pure $ n & tendermintNode_config .~ cfg
@@ -296,7 +318,7 @@ withNetwork root net f = do
 
   loadNetwork root size >>= \case
     Left _ -> do
-      genesisNodes <- toAppNodes <$> initNetwork (T.unpack root) size
+      genesisNodes <- toAppNodes <$> initNetwork (_appNetwork_nodeEnvironment net) (T.unpack root) size
       report "Initialized"
       liftIO $ withAsync (f root genesisNodes) $ \_ ->
         launchNodes genesisNodes
@@ -307,5 +329,7 @@ withNetwork root net f = do
 withThrowawayNetwork :: AppNetwork node -> (Text -> [node] -> IO ()) -> IO ()
 withThrowawayNetwork net f = withTempDir $ \x -> withNetwork x net f
 
-withLocalNetwork :: AppNetwork node -> (Text -> [node] -> IO ()) -> IO ()
-withLocalNetwork net f = withCurrentDir $ \x -> withNetwork x net f
+-- Cannot resume network
+-- https://github.com/f-o-a-m/kepler/issues/217
+_withLocalNetwork :: AppNetwork node -> (Text -> [node] -> IO ()) -> IO ()
+_withLocalNetwork net f = withCurrentDir $ \x -> withNetwork x net f
